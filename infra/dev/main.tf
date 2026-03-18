@@ -1,6 +1,13 @@
 terraform {
   required_version = ">= 1.5"
 
+  backend "s3" {
+    bucket         = "lucas-devops-terraform-state"
+    key            = "eks-devops/terraform.tfstate"
+    region         = "ap-southeast-2"
+    dynamodb_table = "terraform-lock"
+  }
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -31,6 +38,8 @@ module "eks" {
 module "ecr" {
   source = "../modules/ecr"
 }
+
+
 
 output "vpc_id" {
   value = module.vpc.vpc_id
