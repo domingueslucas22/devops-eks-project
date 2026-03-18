@@ -6,13 +6,15 @@ on:
       - main
 
 jobs:
-  build-and-push:
+  build-deploy:
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Baixa o código do repositório
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # 2. Configura credenciais AWS
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -20,17 +22,38 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-southeast-2
 
+      # 3. Login no ECR
       - name: Login to ECR
         uses: aws-actions/amazon-ecr-login@v1
 
+      # 4. Build da imagem Docker
       - name: Build Docker image
         run: |
           docker build -t devops-demo ./app
 
-      - name: Tag image
+      # 5. Tag da imagem para o ECR
+      - name: Tag Docker image
         run: |
           docker tag devops-demo:latest 869935080468.dkr.ecr.ap-southeast-2.amazonaws.com/devops-demolucas:latest
 
+      # 6. Push da imagem para o ECR
       - name: Push to ECR
         run: |
           docker push 869935080468.dkr.ecr.ap-southeast-2.amazonaws.com/devops-demolucas:latest
+
+      # 7. Instalar kubectl
+      - name: Install kubectl
+        run: |
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/
+
+      # 8. Conectar no cluster EKS
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig --name devops-demo --region ap-southeast-2
+
+      # 9. Deploy no Kubernetes
+      - name: Deploy to EKS
+        run: |
+          kubectl apply -f k8s/
